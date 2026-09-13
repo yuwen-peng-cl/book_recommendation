@@ -1,2 +1,6 @@
 .idea/
 *.parquet
+checkpoints/
+logs/
+__pycache__/
+*.npy
