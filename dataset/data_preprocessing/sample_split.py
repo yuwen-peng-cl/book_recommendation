@@ -1,6 +1,9 @@
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
+HERE = Path(__file__).resolve().parent
 SEED = 42
 MIN_RATINGS = 5      # drop users with too little history (CF needs some)
 MAX_RATINGS = 200    # drop heavy users so they don't dominate
@@ -8,8 +11,8 @@ N_USERS = 10000
 DEV_FRAC = 0.15
 TEST_FRAC = 0.15
 
-df_inter = pd.read_parquet('interactions_filtered.parquet')
-df_books = pd.read_parquet('books_filtered.parquet')
+df_inter = pd.read_parquet(HERE / 'interactions_filtered.parquet')
+df_books = pd.read_parquet(HERE / 'books_filtered.parquet')
 
 # 1) filter users by activity, then sample N_USERS of them
 counts = df_inter.groupby('user_id').size()
@@ -35,8 +38,8 @@ df_books = df_books[df_books['book_id'].isin(kept)].reset_index(drop=True)
 # 4) write
 cols = ['user_id', 'book_id', 'rating']
 for name in ('train', 'dev', 'test'):
-    df[df['split'] == name][cols].to_parquet(f'{name}.parquet')
-df_books.to_parquet('books_sample.parquet')
+    df[df['split'] == name][cols].to_parquet(HERE / f'{name}.parquet')
+df_books.to_parquet(HERE / 'books_sample.parquet')
 
 print('users:', df['user_id'].nunique(), 'books:', df_books.shape[0])
 print(df['split'].value_counts().to_dict())
