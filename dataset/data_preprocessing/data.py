@@ -1,9 +1,14 @@
 import gzip
 import json
+import os
+from pathlib import Path
+
 import pandas as pd
 
-BOOKS_PATH = '/Users/pengyuwen/Desktop/coding/goodreads_books_romance.json.gz'
-INTER_PATH = '/Users/pengyuwen/Desktop/coding/goodreads_interactions_romance.json.gz'
+RAW_DIR = Path(os.environ.get('GOODREADS_RAW', Path.home() / 'Desktop' / 'coding'))
+OUT = Path(__file__).resolve().parent
+BOOKS_PATH = RAW_DIR / 'goodreads_books_romance.json.gz'
+INTER_PATH = RAW_DIR / 'goodreads_interactions_romance.json.gz'
 
 # 1) books: keep only those with a description, remember their ids
 book_rows = []
@@ -50,6 +55,6 @@ df_inter = df_inter.drop_duplicates(['user_id', 'book_id'], keep='last')
 # 3) align back: keep only books that actually appear in the interactions
 df_books = df_books[df_books['book_id'].isin(seen_book_ids)].reset_index(drop=True)
 
-df_books.to_parquet('books_filtered.parquet')
-df_inter.to_parquet('interactions_filtered.parquet')
+df_books.to_parquet(OUT / 'books_filtered.parquet')
+df_inter.to_parquet(OUT / 'interactions_filtered.parquet')
 print('books:', df_books.shape, 'interactions:', df_inter.shape)
