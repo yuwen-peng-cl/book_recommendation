@@ -29,6 +29,8 @@ A_DIM = 32            # author embedding dim
 DEBUG = os.environ.get('DEBUG', '0') == '1'  # granular per-op timing for first steps
 CKPT_DIR = Path(__file__).resolve().parent / 'checkpoints'
 EVAL_ONLY = os.environ.get('EVAL_ONLY', '0') == '1'  # skip training; score saved checkpoints
+PATIENCE = int(os.environ.get('PATIENCE', 0))  # stop after this many epochs without a dev gain; 0 = off
+RUN_TAG = os.environ.get('RUN_TAG', '')  # suffix for checkpoint names, keeps separate runs apart
 
 device = 'mps' if torch.backends.mps.is_available() else 'cpu'
 torch.manual_seed(SEED)
@@ -182,7 +184,7 @@ def main():
         model.tf.eval()
         return out
 
-    tag = 'meta' if USE_META else 'desc'
+    tag = ('meta' if USE_META else 'desc') + RUN_TAG
     CKPT_DIR.mkdir(exist_ok=True)
     best_ndcg, best_ep = -1.0, 0
 
@@ -266,6 +268,9 @@ def main():
         torch.save(model.state_dict(), ck)
         if dev_ndcg > best_ndcg:
             best_ndcg, best_ep = dev_ndcg, ep + 1
+        elif PATIENCE and ep + 1 - best_ep >= PATIENCE:
+            print(f'early stop: no dev gain for {PATIENCE} epochs, best epoch {best_ep}', flush=True)
+            break
 
     # final: reload the epoch that was best on dev, report on test
     print(f'best epoch by dev NDCG@10: {best_ep} ({best_ndcg:.4f})')
