@@ -20,15 +20,23 @@ BUCKETS = ['0', '1-2', '3-5', '6-10', '11+']
 
 
 def evaluate(score_all, train_items, rel_items, item_freq,
-             ks=(5, 10, 20), user_batch=512, device='cpu'):
+             ks=(5, 10, 20), user_batch=512, device='cpu', item_emb=None):
     """Rank-based evaluation, model agnostic.
 
     score_all(user_idx_tensor) -> tensor [B, n_items] of scores.
     train_items[u] : 1D long tensor of items to mask (already interacted).
     rel_items[u]   : set of relevant item indices (rating >= 4 in test).
     item_freq      : 1D np array, train frequency per item, for bucketing.
+    item_emb       : optional [n_items, d] tensor in a fixed space shared by all
+                     models, used for intra-list diversity. Every model is judged
+                     with the same yardstick, not with its own vectors.
     """
     kmax = max(ks)
+    n_items = len(item_freq)
+    if item_emb is not None:
+        item_emb = torch.nn.functional.normalize(item_emb.to(device).float(), dim=1)
+    covered = {k: set() for k in ks}
+    ild = {k: 0.0 for k in ks}
     users = [u for u in rel_items if len(rel_items[u]) > 0]
     bucket_of = np.array([freq_bucket(f) for f in item_freq])
 
@@ -68,17 +76,25 @@ def evaluate(score_all, train_items, rel_items, item_freq,
                 ndcg[k] += dcg / idcg_cache[min(len(rel), k)]
                 # per bucket
                 topk_set = set(topk.tolist())
+                covered[k].update(topk_set)
+                if item_emb is not None and k > 1:
+                    e = item_emb[torch.tensor(topk, device=device)]
+                    sim = e @ e.t()
+                    off = (sim.sum() - sim.diag().sum()) / (k * (k - 1))
+                    ild[k] += 1.0 - off.item()
                 for it in rel:
                     b = bucket_of[it]
                     b_tot[k][b] += 1
                     if it in topk_set:
                         b_hit[k][b] += 1
 
-    out = {'overall': {}, 'bucket_recall': {}}
+    out = {'overall': {}, 'bucket_recall': {}, 'coverage': {}, 'ild': {}}
     for k in ks:
         out['overall'][k] = {
             'P': prec[k] / n, 'R': rec[k] / n, 'NDCG': ndcg[k] / n,
         }
+        out['coverage'][k] = len(covered[k]) / n_items
+        out['ild'][k] = ild[k] / n if item_emb is not None else float('nan')
         out['bucket_recall'][k] = {
             b: (b_hit[k][b] / b_tot[k][b] if b_tot[k][b] else float('nan'))
             for b in BUCKETS
@@ -92,6 +108,10 @@ def print_report(out):
     print('overall:')
     for k, m in out['overall'].items():
         print(f"  @{k:<2}  P={m['P']:.4f}  R={m['R']:.4f}  NDCG={m['NDCG']:.4f}")
+    print('beyond accuracy:')
+    for k in out['coverage']:
+        print(f"  @{k:<2}  coverage={out['coverage'][k]:.4f}  "
+              f"intra-list diversity={out['ild'][k]:.4f}")
     print('recall by book train-frequency bucket:')
     header = '  k   ' + '  '.join(f'{b:>6}' for b in BUCKETS)
     print(header)
