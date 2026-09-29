@@ -158,15 +158,6 @@ def main():
     item_freq = np.bincount(tr_i, minlength=n_items)
     train_items = {u: torch.tensor(v, device=device) for u, v in allb.items()}
 
-    # fixed space for intra-list diversity: the frozen description vectors, so
-    # every model is measured with the same yardstick
-    ild_emb = None
-    cache = DATA / 'books_emb.npy'
-    if cache.exists():
-        e = np.load(cache)
-        if len(e) == n_items:
-            ild_emb = torch.tensor(e)
-
     def rel_set(df):
         rel = {}
         for u, b, r in zip(df['user_id'], df['book_id'], df['rating']):
@@ -175,7 +166,7 @@ def main():
         return rel
     rel_dev, rel_test = rel_set(dev), rel_set(test)
 
-    def run_eval(rel, with_ild=False):
+    def run_eval(rel):
         # encode every book with the current encoder, aggregate user profiles, rank
         model.eval()
         with torch.no_grad():
@@ -189,8 +180,7 @@ def main():
         @torch.no_grad()
         def score_all(users):
             return uagg[users] @ vc.t()
-        out = evaluate(score_all, train_items, rel, item_freq, device=device,
-                       item_emb=ild_emb if with_ild else None)
+        out = evaluate(score_all, train_items, rel, item_freq, device=device)
         model.train()
         model.tf.eval()
         return out
@@ -203,7 +193,7 @@ def main():
         ck = CKPT_DIR / f'content_ft_{tag}_s{SEED}_ep{EVAL_EPOCH}.pt'
         model.load_state_dict(torch.load(ck, map_location=device))
         print(f'scoring {ck.name} on test')
-        print_report(run_eval(rel_test, with_ild=True))
+        print_report(run_eval(rel_test))
         return
 
     if EVAL_ONLY:
@@ -220,7 +210,7 @@ def main():
         model.load_state_dict(torch.load(
             CKPT_DIR / f'content_ft_{tag}_s{SEED}_ep{best_ep}.pt', map_location=device))
         print('TEST:')
-        print_report(run_eval(rel_test, with_ild=True))
+        print_report(run_eval(rel_test))
         return
 
     model.train()
@@ -294,7 +284,7 @@ def main():
     print(f'best epoch by dev NDCG@10: {best_ep} ({best_ndcg:.4f})')
     model.load_state_dict(torch.load(CKPT_DIR / f'content_ft_{tag}_s{SEED}_ep{best_ep}.pt', map_location=device))
     print('TEST:')
-    print_report(run_eval(rel_test, with_ild=True))
+    print_report(run_eval(rel_test))
 
 
 if __name__ == '__main__':
