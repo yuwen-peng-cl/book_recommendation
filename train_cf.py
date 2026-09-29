@@ -111,12 +111,6 @@ def main():
     for u, i in zip(tu_np, ti_np):
         train_items.setdefault(int(u), []).append(int(i))
     train_items = {u: torch.tensor(v, device=device) for u, v in train_items.items()}
-    ild_emb = None
-    cache = DATA / 'books_emb.npy'
-    if cache.exists():
-        e = np.load(cache)
-        if len(e) == n_items:
-            ild_emb = torch.tensor(e)
     rel_dev = rel_set(dev, u2i, b2i)
     rel_test = rel_set(test, u2i, b2i)
 
@@ -141,8 +135,7 @@ def main():
     model = train_once(n_users, n_items, mu, tu, ti, tr, du, di, dr,
                        K, best_wd, verbose=True)
     print('\nTEST:')
-    out = evaluate(model.score_all, train_items, rel_test, item_freq, device=device,
-                   item_emb=ild_emb)
+    out = evaluate(model.score_all, train_items, rel_test, item_freq, device=device)
     print_report(out)
 
 
