@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 import torch
 
-DATA = Path(__file__).resolve().parent / 'data'
-CKPT = Path(__file__).resolve().parent / 'checkpoints'
+DATA = Path(__file__).resolve().parent.parent / 'data'
+CKPT = Path(__file__).resolve().parent.parent / 'checkpoints'
 SEED = int(os.environ.get('SEED', 42))
 K = 10
 device = 'mps' if torch.backends.mps.is_available() else 'cpu'

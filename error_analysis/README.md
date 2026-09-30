@@ -1,6 +1,7 @@
 # Error analysis
 
-Supplementary material. Produced by `error_analysis.py` with seed 42, using the
+Supplementary material. Produced by `error_analysis.py` (run as
+`python -m error_analysis.error_analysis` from the repository root) with seed 42, using the
 checkpoints selected on dev. It is not part of the report.
 
 All three models are the ones reported in the paper: matrix factorization,
