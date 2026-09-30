@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-DATA = Path(__file__).resolve().parent / 'dataset' / 'data_preprocessing'
+DATA = Path(__file__).resolve().parent / 'data'
 CKPT = Path(__file__).resolve().parent / 'checkpoints'
 SEED = int(os.environ.get('SEED', 42))
 K = 10

@@ -10,7 +10,7 @@ import torch.nn.functional as F
 
 from evaluation import evaluate, print_report
 
-DATA = Path(__file__).resolve().parent / 'dataset' / 'data_preprocessing'
+DATA = Path(__file__).resolve().parent / 'data'
 ENCODER = 'all-MiniLM-L6-v2'
 MAX_LEN = 128
 SEED = int(os.environ.get('SEED', 42))
