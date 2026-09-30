@@ -63,7 +63,7 @@ def main():
     models = {}
 
     # matrix factorization, retrained here with the L2 value picked on dev
-    from train_cf import MF, train_once
+    from models.train_cf import MF, train_once
     dv = pd.read_parquet(DATA / 'dev.parquet')
     dv = dv[dv['user_id'].isin(u2i) & dv['book_id'].isin(b2i)]
     tu = torch.tensor(tr_u, device=device)
