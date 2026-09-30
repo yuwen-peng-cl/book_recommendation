@@ -147,19 +147,20 @@ def main():
     # 1) content model recall by description length of the relevant book
     print(f'\n=== hit rate@{K} by description length of the wanted book ===')
     qs = np.quantile(desc_len, [.25, .5, .75])
-    def lb(n): return '短(<%d词)' % qs[0] if n < qs[0] else ('中' if n < qs[2] else '长(>%d词)' % qs[2])
-    print(f"{'model':12} " + ' '.join(f'{x:>14}' for x in ['短', '中', '长']))
+    def lb(n): return 'short' if n < qs[0] else ('medium' if n < qs[2] else 'long')
+    bands = ['short', 'medium', 'long']
+    print(f"{'model':12} " + ' '.join(f'{x:>14}' for x in bands))
     for name in models:
-        hit = {'短': [0, 0], '中': [0, 0], '长': [0, 0]}
+        hit = {b: [0, 0] for b in bands}
         for u in users:
             got = set(tops[name][u].tolist())
             for it in rel[u]:
-                b = lb(desc_len[it])
-                key ='短' if b.startswith('短') else ('长' if b.startswith('长') else '中')
+                key = lb(desc_len[it])
                 hit[key][1] += 1
                 if it in got:
                     hit[key][0] += 1
-        print(f'{name:12} ' + ' '.join(f'{hit[k][0]/max(hit[k][1],1):>14.4f}' for k in ['短', '中', '长']))
+        print(f'{name:12} ' + ' '.join(f'{hit[k][0]/max(hit[k][1],1):>14.4f}'
+                                       for k in bands))
 
     # 2) hit rate by how many books the user liked in train
     print(f'\n=== hit rate@{K} by size of the user profile ===')
