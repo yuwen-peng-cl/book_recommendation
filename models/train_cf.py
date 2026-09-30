@@ -8,7 +8,7 @@ import torch.nn as nn
 
 from evaluation import evaluate, print_report
 
-DATA = Path(__file__).resolve().parent / 'data'
+DATA = Path(__file__).resolve().parent.parent / 'data'
 SEED = int(os.environ.get('SEED', 42))
 K = 64            # latent dim
 EPOCHS = 20

@@ -9,7 +9,7 @@ import torch.nn as nn
 
 from evaluation import evaluate, print_report
 
-DATA = Path(__file__).resolve().parent / 'data'
+DATA = Path(__file__).resolve().parent.parent / 'data'
 CACHE = DATA / 'books_emb.npy'
 ENCODER = 'all-MiniLM-L6-v2'
 MAX_LEN = 128

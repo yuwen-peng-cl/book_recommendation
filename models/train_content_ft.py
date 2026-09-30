@@ -10,7 +10,7 @@ import torch.nn.functional as F
 
 from evaluation import evaluate, print_report
 
-DATA = Path(__file__).resolve().parent / 'data'
+DATA = Path(__file__).resolve().parent.parent / 'data'
 ENCODER = 'all-MiniLM-L6-v2'
 MAX_LEN = 128
 SEED = int(os.environ.get('SEED', 42))
@@ -27,7 +27,7 @@ FULL_FT = os.environ.get('FULL_FT', '0') == '1'  # unfreeze the whole encoder + 
 USE_META = os.environ.get('USE_META', '0') == '1'  # fuse author + year into the book vector
 A_DIM = 32            # author embedding dim
 DEBUG = os.environ.get('DEBUG', '0') == '1'  # granular per-op timing for first steps
-CKPT_DIR = Path(__file__).resolve().parent / 'checkpoints'
+CKPT_DIR = Path(__file__).resolve().parent.parent / 'checkpoints'
 EVAL_ONLY = os.environ.get('EVAL_ONLY', '0') == '1'  # skip training; score saved checkpoints
 PATIENCE = int(os.environ.get('PATIENCE', 0))  # stop after this many epochs without a dev gain; 0 = off
 RUN_TAG = os.environ.get('RUN_TAG', '')  # suffix for checkpoint names, keeps separate runs apart
