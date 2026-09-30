@@ -14,11 +14,11 @@ function of item popularity (the **cold-start** regime).
 
 ```
 download_dataset.py                     download the raw Goodreads romance files
-dataset/data_preprocessing/data.py      filter + align books/interactions -> parquet
-dataset/data_preprocessing/sample_split.py   sample users, split train/dev/test
-train_cf.py                             matrix-factorization model + evaluation
-train_content.py                        text model, frozen SBERT + head (dev scaffolding)
-train_content_ft.py                     text model, fine-tuned top layers, optional metadata
+data/data.py                            filter + align books/interactions -> parquet
+data/sample_split.py                    sample users, split train/dev/test
+models/train_cf.py                      matrix-factorization model + evaluation
+models/train_content.py                 text model, frozen SBERT + head (dev scaffolding)
+models/train_content_ft.py              text model, fine-tuned top layers, optional metadata
 evaluation.py                           model-agnostic ranking metrics + popularity buckets
 error_analysis.py                       where the models fail + side-by-side top-5 lists
 ```
@@ -53,20 +53,20 @@ The preprocessing scripts read the same `GOODREADS_RAW` directory.
 ## Run
 
 ```
-python dataset/data_preprocessing/data.py          # -> books_filtered / interactions_filtered
-python dataset/data_preprocessing/sample_split.py   # -> train / dev / test / books_sample
-python train_cf.py                                  # trains CF, prints metrics
-python train_content.py                             # trains text model, prints metrics
+python data/data.py                  # -> books_filtered / interactions_filtered
+python data/sample_split.py          # -> train / dev / test / books_sample
+python -m models.train_cf            # trains CF, prints metrics
+python -m models.train_content       # trains text model, prints metrics
 ```
 
-`train_content.py` encodes every book once with MiniLM and caches the vectors to
-`dataset/data_preprocessing/books_emb.npy`; later runs reuse the cache. It is only
+`models/train_content.py` encodes every book once with MiniLM and caches the vectors to
+`data/books_emb.npy`; later runs reuse the cache. It is only
 used to get the pipeline working, the reported text models come from
-`train_content_ft.py`:
+`models/train_content_ft.py`:
 
 ```
-FT_USERS=0 EPOCHS=10 PATIENCE=2 RUN_TAG=_es SEED=42 python train_content_ft.py               # description only
-FT_USERS=0 EPOCHS=10 PATIENCE=2 RUN_TAG=_es SEED=42 USE_META=1 python train_content_ft.py    # + author, year
+FT_USERS=0 EPOCHS=10 PATIENCE=2 RUN_TAG=_es SEED=42 python -m models.train_content_ft               # description only
+FT_USERS=0 EPOCHS=10 PATIENCE=2 RUN_TAG=_es SEED=42 USE_META=1 python -m models.train_content_ft    # + author, year
 ```
 
 | variable | default | meaning |
@@ -80,7 +80,7 @@ FT_USERS=0 EPOCHS=10 PATIENCE=2 RUN_TAG=_es SEED=42 USE_META=1 python train_cont
 | `RUN_TAG` | | suffix for the checkpoint names in `checkpoints/` |
 | `EVAL_ONLY`, `EVAL_EPOCH` | 0 | skip training and score saved checkpoints on test |
 
-The best epoch is picked on dev (NDCG@10) and scored on test. `train_cf.py` also
+The best epoch is picked on dev (NDCG@10) and scored on test. `models/train_cf.py` also
 reads `SEED`. `error_analysis.py` loads the saved checkpoints of the same `SEED`.
 
 Each `train_*.py` trains in memory and prints overall Precision/Recall/NDCG@K
@@ -112,5 +112,5 @@ recommends the most rated books, so it gets nothing on books with few ratings.
 `evaluation.py` is model agnostic: it only needs a scoring function
 `score_all(user_idx) -> [n_users_in_batch, n_items]`. Any recommender that can
 score users against all items can be evaluated and bucketed by item popularity
-with the same code — see how `train_cf.py` and `train_content.py` call
+with the same code — see how `models/train_cf.py` and `models/train_content.py` call
 `evaluate(...)`.
