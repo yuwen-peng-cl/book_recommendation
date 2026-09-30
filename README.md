@@ -21,6 +21,7 @@ models/train_content.py                 text model, frozen SBERT + head (dev sca
 models/train_content_ft.py              text model, fine-tuned top layers, optional metadata
 evaluation.py                           model-agnostic ranking metrics + popularity buckets
 error_analysis.py                       where the models fail + side-by-side top-5 lists
+error_analysis.md                       its output, see there for the side-by-side lists
 ```
 
 ## Setup
@@ -79,6 +80,10 @@ FT_USERS=0 EPOCHS=10 PATIENCE=2 RUN_TAG=_es SEED=42 USE_META=1 python -m models.
 | `USE_META` | 0 | add author embedding, publication year and a missing-year flag |
 | `RUN_TAG` | | suffix for the checkpoint names in `checkpoints/` |
 | `EVAL_ONLY`, `EVAL_EPOCH` | 0 | skip training and score saved checkpoints on test |
+
+Checkpoints are written to `checkpoints/` and are not part of this repository,
+so `error_analysis.py` needs the models to be trained first. Its output is kept
+in `error_analysis.md`.
 
 The best epoch is picked on dev (NDCG@10) and scored on test. `models/train_cf.py` also
 reads `SEED`. `error_analysis.py` loads the saved checkpoints of the same `SEED`.
