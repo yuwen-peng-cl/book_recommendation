@@ -3,8 +3,9 @@
 Comparing two neural recommenders for books on the Goodreads (romance) data:
 
 - **Interaction based** — matrix factorization (learned user/item embeddings, MSE).
-- **Text based** — a network on top of Sentence-BERT description embeddings,
-  trained with a logistic ranking objective and negative sampling.
+- **Text based** — Sentence-BERT (MiniLM) on the book descriptions, top two
+  encoder layers fine-tuned with a logistic ranking objective and negative
+  sampling. A second variant also gets the author and publication year.
 
 Both are ranked with the same protocol, with a focus on how they behave as a
 function of item popularity (the **cold-start** regime).
@@ -16,8 +17,10 @@ download_dataset.py                     download the raw Goodreads romance files
 dataset/data_preprocessing/data.py      filter + align books/interactions -> parquet
 dataset/data_preprocessing/sample_split.py   sample users, split train/dev/test
 train_cf.py                             matrix-factorization model + evaluation
-train_content.py                        text model (frozen SBERT + head) + evaluation
+train_content.py                        text model, frozen SBERT + head (dev scaffolding)
+train_content_ft.py                     text model, fine-tuned top layers, optional metadata
 evaluation.py                           model-agnostic ranking metrics + popularity buckets
+error_analysis.py                       where the models fail + side-by-side top-5 lists
 ```
 
 ## Setup
@@ -57,10 +60,52 @@ python train_content.py                             # trains text model, prints 
 ```
 
 `train_content.py` encodes every book once with MiniLM and caches the vectors to
-`dataset/data_preprocessing/books_emb.npy`; later runs reuse the cache.
+`dataset/data_preprocessing/books_emb.npy`; later runs reuse the cache. It is only
+used to get the pipeline working, the reported text models come from
+`train_content_ft.py`:
+
+```
+FT_USERS=0 EPOCHS=10 PATIENCE=2 RUN_TAG=_es SEED=42 python train_content_ft.py               # description only
+FT_USERS=0 EPOCHS=10 PATIENCE=2 RUN_TAG=_es SEED=42 USE_META=1 python train_content_ft.py    # + author, year
+```
+
+| variable | default | meaning |
+|---|---|---|
+| `SEED` | 42 | random seed, also part of the checkpoint name |
+| `FT_USERS` | 3000 | users used for training, 0 = all |
+| `EPOCHS` | 2 | maximum number of epochs |
+| `PATIENCE` | 0 | stop after this many epochs without a dev gain, 0 = off |
+| `UNFREEZE` | 2 | number of top encoder layers that are fine-tuned |
+| `USE_META` | 0 | add author embedding, publication year and a missing-year flag |
+| `RUN_TAG` | | suffix for the checkpoint names in `checkpoints/` |
+| `EVAL_ONLY`, `EVAL_EPOCH` | 0 | skip training and score saved checkpoints on test |
+
+The best epoch is picked on dev (NDCG@10) and scored on test. `train_cf.py` also
+reads `SEED`. `error_analysis.py` loads the saved checkpoints of the same `SEED`.
 
 Each `train_*.py` trains in memory and prints overall Precision/Recall/NDCG@K
 plus recall broken down by how many training ratings each book has.
+
+## Results
+
+Test set, mean ± std over seeds 42, 43, 44. A positive is a rating of 4 or more.
+
+| | NDCG@20 | Recall@20 |
+|---|---|---|
+| CF | .064 ± .001 | .085 ± .001 |
+| text, description | .068 ± .011 | .122 ± .007 |
+| text, description + metadata | .101 ± .007 | .188 ± .009 |
+
+Recall@20 by how many training ratings the book has (mean over the seeds):
+
+| | 0 | 1-2 | 3-5 | 6-10 | 11+ |
+|---|---|---|---|---|---|
+| CF | .000 | .000 | .000 | .000 | .095 |
+| text, description | .005 | .008 | .007 | .013 | .117 |
+| text, description + metadata | .033 | .043 | .059 | .070 | .166 |
+
+With the tuned L2 weight CF is close to a popularity ranking: it only ever
+recommends the most rated books, so it gets nothing on books with few ratings.
 
 ## Reusing the evaluation
 
